@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { SensorData, Insight, StatsCollection } from '../types';
 import { SENSOR_THRESHOLDS } from '../constants';
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = 'AIzaSyCXmWVe4vrj3ozPG9Wsq37jpsEzOr1zUjM';
 
 if (!API_KEY) {
     console.warn("API_KEY environment variable not set. Gemini features will be disabled.");
