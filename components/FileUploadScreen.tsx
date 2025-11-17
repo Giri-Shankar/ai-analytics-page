@@ -55,9 +55,9 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({ onFileUpload, onSam
         <div className="mt-10 bg-white/60 backdrop-blur-sm rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-3 text-gray-800">Expected CSV Format</h3>
           <div className="bg-gray-800 text-white p-4 rounded-lg font-mono text-sm overflow-x-auto text-left">
-            <div className="text-gray-300">> header: date,time,temperature,humidity,light,airQuality</div>
-            <div className="text-green-400">> row 1: 2024-01-01,10:00,22.5,65,450,85</div>
-            <div className="text-green-400">> row 2: 2024-01-01,11:00,23.1,63,520,82</div>
+            <div className="text-gray-300">&gt; header: date,time,temperature,humidity,light,airQuality</div>
+            <div className="text-green-400">&gt; row 1: 2024-01-01,10:00,22.5,65,450,85</div>
+            <div className="text-green-400">&gt; row 2: 2024-01-01,11:00,23.1,63,520,82</div>
           </div>
         </div>
       </div>
