@@ -1,4 +1,5 @@
 {
+  "homepage": "https://Giri-Shankar.github.io/ai-analytics-page",
   "name": "ai-powered-sensor-dashboard",
   "private": true,
   "version": "0.0.0",
@@ -24,6 +25,5 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "gh-pages": "^5.0.0"
-  },
-  "homepage": "https://Giri-Shankar.github.io/ai-analytics-page"
+  }
 }
