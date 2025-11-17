@@ -1,0 +1,5 @@
+{
+  "name": "AI-Powered Sensor Dashboard",
+  "description": "An intelligent dashboard to upload, visualize, and analyze time-series sensor data from CSV files. It leverages Gemini to provide actionable insights and recommendations based on environmental metrics like temperature, humidity, light, and air quality.",
+  "requestFramePermissions": []
+}
