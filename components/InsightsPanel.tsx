@@ -35,13 +35,16 @@ const InsightCard: React.FC<{ insight: Insight }> = ({ insight }) => {
   );
 };
 
-const InsightsPanel: React.FC<InsightsPanelProps> = ({ insights = [], isLoading }) => {
+const InsightsPanel: React.FC<InsightsPanelProps> = ({ insights, isLoading }) => {
+  const safeInsights = Array.isArray(insights) ? insights : [];
+
   return (
     <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-indigo-100 rounded-xl shadow-lg p-6 mb-6">
       <div className="flex items-center gap-3 mb-4">
         <Lightbulb className="text-purple-600" size={28} />
         <h2 className="text-2xl font-bold text-gray-800">AI-Powered Insights</h2>
       </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="animate-spin text-purple-600 mr-3" size={32} />
@@ -49,8 +52,8 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ insights = [], isLoading 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {insights.length > 0 ? (
-            insights.map((insight, idx) => <InsightCard key={idx} insight={insight} />)
+          {safeInsights.length > 0 ? (
+            safeInsights.map((insight, idx) => <InsightCard key={idx} insight={insight} />)
           ) : (
             <div className="col-span-2 text-center text-gray-500 py-8">
               No insights were generated for this dataset.
@@ -61,5 +64,6 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ insights = [], isLoading 
     </div>
   );
 };
+
 
 export default InsightsPanel;

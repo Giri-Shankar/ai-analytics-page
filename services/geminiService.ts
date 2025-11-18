@@ -82,8 +82,15 @@ export const generateInsightsFromData = async (data: SensorData[]): Promise<Insi
             console.error('Failed to parse AI response. Raw text:', text);
             throw new Error('Invalid AI JSON response');
         }
-        console.log(parsed.insights || parsed)
-        return parsed.insights as Insight[];
+        const insights =
+            Array.isArray(parsed) ? parsed :
+                Array.isArray(parsed.insights) ? parsed.insights :
+                    Array.isArray(parsed.data) ? parsed.data :
+                        [];
+
+        console.log("FINAL INSIGHTS ARRAY:", insights);
+
+        return insights as Insight[];
     } catch (err) {
         console.error('Error calling GPT-OSS-20B:', err);
         throw new Error('Failed to generate insights using GPT-OSS-20B.');
