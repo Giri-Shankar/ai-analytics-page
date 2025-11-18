@@ -77,7 +77,6 @@ export const generateInsightsFromData = async (data: SensorData[]): Promise<Insi
         // let parsed = parseInsightsFromMarkdown(text);
         let cleanText = text.replace(/```json|```/g, '').trim();
         let parsed = JSON.parse(cleanText)
-        // if (!parsed) parsed = parseInsightsFromMarkdown(text);
         if (!parsed) {
             console.error('Failed to parse AI response. Raw text:', text);
             throw new Error('Invalid AI JSON response');
