@@ -35,7 +35,7 @@ const InsightCard: React.FC<{ insight: Insight }> = ({ insight }) => {
   );
 };
 
-const InsightsPanel: React.FC<InsightsPanelProps> = ({ insights, isLoading }) => {
+const InsightsPanel: React.FC<InsightsPanelProps> = ({ insights = [], isLoading }) => {
   return (
     <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-indigo-100 rounded-xl shadow-lg p-6 mb-6">
       <div className="flex items-center gap-3 mb-4">
