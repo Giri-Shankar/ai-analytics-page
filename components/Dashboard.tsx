@@ -7,30 +7,33 @@ import DistributionChart from './DistributionChart';
 import CorrelationChart from './CorrelationChart';
 import InsightsPanel from './InsightsPanel';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Sun, Moon, Upload, Power, FileText } from 'lucide-react';
+import { Sun, Moon, Power, FileText, ExternalLink } from 'lucide-react';
 
 interface DashboardProps {
   data: SensorData[];
   fileName: string;
   insights: Insight[];
   isInsightsLoading: boolean;
-  onNewUpload: (files: File[]) => void;
   onReset: () => void;
+  sourceUrl?: string; // Optional: to show where data came from
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, fileName, insights, isInsightsLoading, onNewUpload, onReset }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  data, 
+  fileName, 
+  insights, 
+  isInsightsLoading, 
+  onReset,
+  sourceUrl 
+}) => {
   const [timeRange, setTimeRange] = useState('all');
 
   const filteredData = useMemo(() => {
     if (timeRange === 'all') return data;
-    const now = new Date();
     let hoursToFilter = 0;
     if(timeRange === '24h') hoursToFilter = 24;
     else if (timeRange === '7d') hoursToFilter = 24 * 7;
     else if (timeRange === '30d') hoursToFilter = 24 * 30;
-    
-    // This assumes data is hourly. For more robust filtering, we should parse timestamps.
-    // Given the CSV format, a slice is a reasonable approximation.
     return data.slice(-hoursToFilter);
   }, [data, timeRange]);
 
@@ -56,13 +59,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, fileName, insights, isInsig
       airQuality: calculate('airQuality')
     };
   }, [data]);
-  
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      onNewUpload(Array.from(files));
-    }
-  };
 
   const dayNightData = useMemo(() => {
     if (data.length === 0) return [];
@@ -70,7 +66,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, fileName, insights, isInsig
     const daytime = data.filter(d => d.isDaytime);
     const nighttime = data.filter(d => !d.isDaytime);
     
-    const avgCalc = (arr: SensorData[], key: keyof SensorData) => arr.reduce((sum, d) => sum + (d[key] as number || 0), 0) / arr.length || 0;
+    const avgCalc = (arr: SensorData[], key: keyof SensorData) => 
+      arr.reduce((sum, d) => sum + (d[key] as number || 0), 0) / arr.length || 0;
     
     return [
       {
@@ -104,15 +101,24 @@ const Dashboard: React.FC<DashboardProps> = ({ data, fileName, insights, isInsig
                 <FileText size={16} />
                 <span>{fileName} ({data.length} data points)</span>
               </div>
+              {sourceUrl && (
+                <a 
+                  href={sourceUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-sm mt-1"
+                >
+                  <ExternalLink size={14} />
+                  View source
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-3">
-              <label className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-2">
-                <Upload size={18} />
-                New Files
-                <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" multiple />
-              </label>
-              <button onClick={onReset} className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition-colors flex items-center gap-2">
-                <Power size={18} /> Reset
+              <button 
+                onClick={onReset} 
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors flex items-center gap-2"
+              >
+                <Power size={18} /> Close
               </button>
             </div>
           </div>
@@ -141,68 +147,72 @@ const Dashboard: React.FC<DashboardProps> = ({ data, fileName, insights, isInsig
 
         {/* Time Series Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-              <h2 className="text-xl font-semibold text-gray-800">Sensor Readings Over Time</h2>
-              <div className="flex gap-2 flex-wrap">
-                {['24h', '7d', '30d', 'all'].map(range => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${timeRange === range ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    {range === 'all' ? 'All Data' : `Last ${range.toUpperCase()}`}
-                  </button>
-                ))}
-              </div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+            <h2 className="text-xl font-semibold text-gray-800">Sensor Readings Over Time</h2>
+            <div className="flex gap-2 flex-wrap">
+              {['24h', '7d', '30d', 'all'].map(range => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
+                    timeRange === range 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {range === 'all' ? 'All Data' : `Last ${range.toUpperCase()}`}
+                </button>
+              ))}
             </div>
-            <TimeSeriesChart data={filteredData} />
+          </div>
+          <TimeSeriesChart data={filteredData} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Day/Night Patterns */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <Sun className="text-yellow-500" size={24} />
-                    <h2 className="text-xl font-semibold text-gray-800">Day vs. Night Averages</h2>
-                    <Moon className="text-blue-800" size={20} />
-                </div>
-                <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={dayNightData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="period" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="temperature" fill="#EF4444" name="Temp (°C)" />
-                        <Bar dataKey="humidity" fill="#3B82F6" name="Humidity (%)" />
-                        <Bar dataKey="light" fill="#F59E0B" name="Light (lux)" />
-                        <Bar dataKey="airQuality" fill="#10B981" name="Air Quality" />
-                    </BarChart>
-                </ResponsiveContainer>
+          {/* Day/Night Patterns */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Sun className="text-yellow-500" size={24} />
+              <h2 className="text-xl font-semibold text-gray-800">Day vs. Night Averages</h2>
+              <Moon className="text-blue-800" size={20} />
             </div>
-            
-            {/* Correlations */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Correlations</h2>
-                <CorrelationChart data={data} />
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dayNightData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="temperature" fill="#EF4444" name="Temp (°C)" />
+                <Bar dataKey="humidity" fill="#3B82F6" name="Humidity (%)" />
+                <Bar dataKey="light" fill="#F59E0B" name="Light (lux)" />
+                <Bar dataKey="airQuality" fill="#10B981" name="Air Quality" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Correlations */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Correlations</h2>
+            <CorrelationChart data={data} />
+          </div>
         </div>
 
         {/* Distribution Charts */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-             <h2 className="text-xl font-semibold text-gray-800 mb-4">Data Distribution</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
-                {Object.entries(SENSOR_CONFIG).map(([key, config]) => (
-                    <DistributionChart
-                        key={key}
-                        data={data}
-                        dataKey={key as keyof SensorData}
-                        title={config.name}
-                        color={config.color}
-                        threshold={SENSOR_THRESHOLDS[key]}
-                    />
-                ))}
-            </div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Data Distribution</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+            {Object.entries(SENSOR_CONFIG).map(([key, config]) => (
+              <DistributionChart
+                key={key}
+                data={data}
+                dataKey={key as keyof SensorData}
+                title={config.name}
+                color={config.color}
+                threshold={SENSOR_THRESHOLDS[key]}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
