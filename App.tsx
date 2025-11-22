@@ -1,134 +1,126 @@
 import React, { useState, useCallback } from 'react';
-import Papa from 'papaparse';
-import { SensorData, Insight } from './types';
-import { processSensorData } from './utils/dataProcessor';
-import { generateInsightsFromData } from './services/geminiService';
-import FileUploadScreen from './components/FileUploadScreen';
-import Dashboard from './components/Dashboard';
-import { SAMPLE_CSV_DATA } from './constants';
+import URLFileLoader from './URLFileLoader';
+import Dashboard from './Dashboard';
+import { SensorData, Insight } from '../types';
+import { parseCSV } from '../utils/csvParser';
+import { generateInsights } from '../utils/insightsGenerator';
+
+interface ParsedFileData {
+  fileName: string;
+  content: string;
+}
+
+type AppState = 'loading' | 'dashboard' | 'error';
 
 const App: React.FC = () => {
-  const [data, setData] = useState<SensorData[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isInsightsLoading, setIsInsightsLoading] = useState<boolean>(false);
-  const [insights, setInsights] = useState<Insight[]>([]);
+  const [appState, setAppState] = useState<AppState>('loading');
+  const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [fileName, setFileName] = useState<string>('');
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDataProcessed = useCallback(async (processedData: SensorData[], name: string) => {
-    if (processedData.length > 0) {
-      setData(processedData);
-      setFileName(name);
-      setError(null);
-      setIsInsightsLoading(true);
-      try {
-        const generatedInsights = await generateInsightsFromData(processedData);
-        setInsights(generatedInsights);
-      } catch (e) {
-        console.error("Error generating insights:", e);
-        setInsights([{
-          severity: 'warning',
-          title: 'AI Insight Generation Failed',
-          description: 'Could not generate AI-powered insights. Please check your API key and network connection.',
-          recommendation: 'You can still explore the visualized data manually.'
-        }]);
-      } finally {
-        setIsInsightsLoading(false);
+  const processData = useCallback(async (files: ParsedFileData[]) => {
+    try {
+      // Combine all file data
+      let allData: SensorData[] = [];
+      const fileNames: string[] = [];
+
+      for (const file of files) {
+        const parsed = parseCSV(file.content);
+        allData = [...allData, ...parsed];
+        fileNames.push(file.fileName);
       }
-    } else {
-      setError("No valid data found in the file(s). Please check the file format and content.");
-      setData([]);
-    }
-    setIsLoading(false);
-  }, []);
-  
-  const parseAndProcessFiles = useCallback((files: File[]) => {
-    setIsLoading(true);
-    setError(null);
-    setData([]);
-    setInsights([]);
 
-    const parsePromises = files.map(file => 
-      new Promise<Record<string, any>[]>((resolve, reject) => {
-        Papa.parse(file, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            resolve(results.data as Record<string, any>[]);
-          },
-          error: (err) => {
-            reject(new Error(`Error parsing ${file.name}: ${err.message}`));
-          }
-        });
-      })
-    );
-
-    Promise.all(parsePromises)
-      .then(results => {
-        const combinedData = results.flat();
-        const processedData = processSensorData(combinedData);
-        const name = files.length === 1 ? files[0].name : `${files.length} files combined`;
-        handleDataProcessed(processedData, name);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setIsLoading(false);
+      // Sort by timestamp if available
+      allData.sort((a, b) => {
+        if (a.timestamp && b.timestamp) {
+          return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        }
+        return 0;
       });
 
-  }, [handleDataProcessed]);
+      setSensorData(allData);
+      setFileName(fileNames.join(', '));
+      setAppState('dashboard');
 
-  const handleFileUpload = useCallback((files: File[]) => {
-    parseAndProcessFiles(files);
-  }, [parseAndProcessFiles]);
+      // Generate AI insights
+      setIsInsightsLoading(true);
+      const generatedInsights = await generateInsights(allData);
+      setInsights(generatedInsights);
+      setIsInsightsLoading(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to process data';
+      setError(msg);
+      setAppState('error');
+    }
+  }, []);
 
-  const handleSampleData = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
-    setData([]);
-    setInsights([]);
+  const handleDataLoaded = useCallback((files: ParsedFileData[]) => {
+    processData(files);
+  }, [processData]);
 
-    Papa.parse(SAMPLE_CSV_DATA, {
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const processedData = processSensorData(results.data as Record<string, any>[]);
-        handleDataProcessed(processedData, 'Sample Data');
-      },
-      error: (err) => {
-        setError(`CSV Parsing Error: ${err.message}`);
-        setIsLoading(false);
+  const handleError = useCallback((errorMsg: string) => {
+    setError(errorMsg);
+    setAppState('error');
+  }, []);
+
+  const handleNewUpload = useCallback((files: File[]) => {
+    // For new uploads, read files and process
+    const readFiles = async () => {
+      const results: ParsedFileData[] = [];
+      for (const file of files) {
+        const content = await file.text();
+        results.push({ fileName: file.name, content });
       }
-    });
-  }, [handleDataProcessed]);
+      processData(results);
+    };
+    readFiles();
+  }, [processData]);
 
-  const resetDashboard = () => {
-    setData([]);
-    setFileName('');
-    setError(null);
-    setInsights([]);
-  };
+  const handleReset = useCallback(() => {
+    // Clear URL params and reload
+    window.history.replaceState({}, '', window.location.pathname);
+    window.location.reload();
+  }, []);
 
-  if (data.length === 0) {
+  // Show loading/URL file loader when in loading state
+  if (appState === 'loading') {
     return (
-      <FileUploadScreen 
-        onFileUpload={handleFileUpload} 
-        onSampleData={handleSampleData}
-        isLoading={isLoading} 
-        error={error} 
+      <URLFileLoader 
+        onDataLoaded={handleDataLoaded}
+        onError={handleError}
       />
     );
   }
 
+  // Show error state
+  if (appState === 'error') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={handleReset}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show dashboard
   return (
-    <Dashboard 
-      data={data}
+    <Dashboard
+      data={sensorData}
       fileName={fileName}
       insights={insights}
       isInsightsLoading={isInsightsLoading}
-      onNewUpload={handleFileUpload}
-      onReset={resetDashboard}
+      onNewUpload={handleNewUpload}
+      onReset={handleReset}
     />
   );
 };
